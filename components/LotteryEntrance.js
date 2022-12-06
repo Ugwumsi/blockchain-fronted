@@ -3,69 +3,126 @@ import {abi, contractAddresses} from "../constants/index.js"
 import {useMoralis} from "react-moralis"
 import { useEffect, useState } from "react"
 import { ethers } from "ethers"
+import { useNotification } from 'web3uikit'
 
 export default function LotteryEntrance(){
 
     const {chainId: chainIdHex, isWeb3Enabled} = useMoralis()
     const chainId = parseInt(chainIdHex)
-    console.log(chainId)
+    //console.log(chainId)
     const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
-    console.log(raffleAddress)
-
-    // const {chainId: chainIdHex, isWeb3Enabled} = useMoralis()
-    // const chainId = parseInt(chainIdHex)
-    // console.log(chainId)
-    // const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
     //console.log(raffleAddress)
+    const [entranceFee, setEntranceFee] = useState("0")
+    const [numPlayers, setNumPlayers] = useState("0")
+    const [recentWinner, setRecentWinner] = useState("0")
+    
+    const dispatch = useNotification()
 
-    // const [entranceFee, setEntranceFee] = useState("0")
-    // const{runContractFunction: enterRaffle} = useWeb3Contract({ 
-    //     abi: abi,
-    //     contractAddress: raffleAddress,
-    //     fucntionName: "enterRaffle",
-    //     msgvalue: entranceFee,
-    //     params: {},
-    // })
+
+    const{runContractFunction: enterRaffle, isLoading, isFetching} = useWeb3Contract({ 
+        abi: abi,
+        contractAddress: raffleAddress,
+        functionName: "enterRaffle",
+        msgValue: entranceFee,
+        params: {},
+    })
 
     const{runContractFunction: getEntranceFee} = useWeb3Contract({ 
         abi: abi,
         contractAddress: raffleAddress,
-        fucntionName: "getEntranceFee",
+        functionName: "getEntranceFee",
         params: {},
 
     })
+
+    const{runContractFunction: getNumberOfPlayers} = useWeb3Contract({ 
+        abi: abi,
+        contractAddress: raffleAddress,
+        functionName: "getNumberOfPlayers",
+        params: {},
+
+    })
+
+    const{runContractFunction: getRecentWinner} = useWeb3Contract({ 
+        abi: abi,
+        contractAddress: raffleAddress,
+        functionName: "getRecentWinner",
+        params: {},
+
+    })
+
+    
     
 
+    async function updateUI() {
+        
+        const entranceFeeFromCall = (await getEntranceFee()).toString()
+        //console.log(entranceFeeFromCall)
+        const numberOfPlayersFromCall = (await getNumberOfPlayers()).toString()
+        const recentWinnerFromCall = await getRecentWinner()
+        
+        setEntranceFee(entranceFeeFromCall)
+        setNumPlayers(numberOfPlayersFromCall)
+        setRecentWinner(recentWinnerFromCall)
+        
+
+        
+
+        
+
+    }
+
     useEffect(() => {
-        if(isWeb3Enabled){
-            async function updateUI() {
-                const something = await getEntranceFee()
-                console.log(something)
-            }
+        if (isWeb3Enabled){
+            
+           
             updateUI()
         }
-    }, [isWeb3Enabled])
-
-    // useEffect(() => {
-    //     if (isWeb3Enabled){
             
-    //         async function updateUI() {
-    //             const something = await getEntranceFee()
-    //             console.log(something)
-    //         //     const entranceFeeFromCall = (await getEntranceFee())//.toString()
-    //         //     console.log(entranceFeeFromCall)
-    //         //     // setEntranceFee(ethers.utils.formatUnits(entranceFeeFromCall), "ether")
+    }, [isWeb3Enabled]) 
+
+    const handleSuccess = async function(tx){
+        await tx.wait(1)
+        handleNewNotification(tx)
+        updateUI()
+
+    }
+
+    const handleNewNotification = function () {
+        dispatch({
+            type: "info",
+            message: "Transaction Complete!",
+            title: "Tx Notification",
+            position: "topR",
+            icon: "bell"
+        })
+            
+    }
+
+
+    
+    return <div className="p-5">
+        Hello from the other side 
+        {raffleAddress ? (<div>
+            <button 
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto"
+                onClick={async function(){await enterRaffle({onSuccess: handleSuccess})}}
+                disabled={isLoading || isFetching}>
+                    {isLoading || isFetching ? <div className="animate-spin spinner-border h-8 w-8 border-b-2 rounded-full">
+
+                    </div> : 
+                    <div>
+                       Enter Raffle 
+                       </div>}
                 
-
-    //         }
-    //         updateUI()
-    //     }
+                </button>
+            <div>Entrance Fee: {ethers.utils.formatUnits(entranceFee, "ether")} ETH </div>
+            <div>Players: {numPlayers}</div> 
+            <div>Winner: {recentWinner}</div>
             
-    // }, [isWeb3Enabled]) 
-
-
-    //<div>Entrance Fee: {entranceFee} ETH</div>
-    return <div>
-        Hello from the other side
+            </div>
+        ):(<div>No Raffle Address Detected</div>
+        )}
+        
     </div>
 }
