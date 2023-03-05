@@ -15,7 +15,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Header/>
-      Happy Birthday, Bitches!!!
+      Hi! Welcome to My Smart Contract Lottery
       <LotteryEntrance/>
     </div>
   )
